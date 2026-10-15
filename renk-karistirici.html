@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Renk Karıştırıcı</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 0 auto; padding: 16px; background: #fafafa; color: #222; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  p.sub { margin-top: 0; color: #666; }
+  .wheel { position: relative; width: 320px; height: 320px; margin: 16px auto; }
+  .wheel .sw { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+  .sw { border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #0003; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; text-align: center; color: #000a; padding: 0; }
+  .sw.dark { color: #fffc; }
+  .sw:hover { transform: scale(1.08); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 10px; }
+  .grid .sw { position: static; width: 70px; height: 70px; margin: 0 auto; }
+  .mixer { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+  .slot { width: 96px; height: 96px; border-radius: 16px; border: 2px dashed #aaa; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; font-size: 13px; padding: 4px; box-sizing: border-box; }
+  .slot.filled { border-style: solid; border-color: #0003; }
+  .op { font-size: 2rem; color: #888; }
+  #result-name { text-align: center; font-size: 1.2rem; font-weight: 700; min-height: 1.5em; }
+  #note { text-align: center; color: #777; font-size: 0.85rem; min-height: 1.2em; }
+  button.reset { display: block; margin: 8px auto; padding: 8px 18px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  td, th { padding: 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; }
+  .dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: middle; margin-right: 6px; border: 1px solid #0003; }
+</style>
+</head>
+<body>
+<h1>🎨 Renk Karıştırıcı</h1>
+<p class="sub">İki renge tıkla, karışımı gör. (Boya, pastel boya ve guaj mantığıyla)</p>
+
+<h2>Renk çemberi (12 renk)</h2>
+<div class="wheel" id="wheel"></div>
+
+<h2>Karıştır</h2>
+<div class="mixer">
+  <div class="slot" id="slotA">1. renk</div>
+  <div class="op">+</div>
+  <div class="slot" id="slotB">2. renk</div>
+  <div class="op">=</div>
+  <div class="slot" id="slotR">?</div>
+</div>
+<div id="result-name"></div>
+<div id="note"></div>
+<button class="reset" id="reset">Sıfırla</button>
+
+<h2>Diğer renkler</h2>
+<div class="grid" id="others"></div>
+
+<h2>Tüm tarifler</h2>
+<table id="recipes"><thead><tr><th>Karışım</th><th>Sonuç</th></tr></thead><tbody></tbody></table>
+
+<h2>Tamamlayıcı (zıt) renkler</h2>
+<p>Kırmızı ↔ Yeşil &nbsp;•&nbsp; Mavi ↔ Turuncu &nbsp;•&nbsp; Sarı ↔ Mor<br>
+Yan yana güzel durur, karıştırınca kahverengi-gri verir.</p>
+
+<script>
+// ---- Renk tanımları ----
+const COLORS = {
+  kirmizi:  { name: "Kırmızı",        hex: "#E53935", wheel: 0 },
+  kirturuncu:{ name: "Kırmızı-turuncu",hex: "#F4511E", wheel: 1 },
+  turuncu:  { name: "Turuncu",        hex: "#FB8C00", wheel: 2 },
+  sariturunc:{ name: "Sarı-turuncu",   hex: "#FFB300", wheel: 3 },
+  sari:     { name: "Sarı",           hex: "#FDD835", wheel: 4 },
+  sariyesil:{ name: "Sarı-yeşil",     hex: "#9CCC30", wheel: 5 },
+  yesil:    { name: "Yeşil",          hex: "#43A047", wheel: 6 },
+  maviyesil:{ name: "Mavi-yeşil",     hex: "#00ACC1", wheel: 7 },
+  mavi:     { name: "Mavi",           hex: "#1E5BC6", wheel: 8 },
+  mavimor:  { name: "Mavi-mor",       hex: "#5E35B1", wheel: 9 },
+  mor:      { name: "Mor",            hex: "#8E24AA", wheel: 10 },
+  kirmizimor:{ name: "Kırmızı-mor",   hex: "#C2185B", wheel: 11 },
+
+  beyaz:    { name: "Beyaz",          hex: "#FFFFFF" },
+  siyah:    { name: "Siyah",          hex: "#111111" },
+  kahve:    { name: "Kahverengi",     hex: "#6D4C41" },
+  gri:      { name: "Gri",            hex: "#9E9E9E" },
+  pembe:    { name: "Pembe",          hex: "#F8A5C2" },
+  acikmavi: { name: "Açık mavi",      hex: "#8EC5F5" },
+  lila:     { name: "Lila",           hex: "#CBA6E3" },
+  lacivert: { name: "Lacivert",       hex: "#14306B" },
+  koyuyesil:{ name: "Koyu yeşil",     hex: "#1B5E20" },
+  bordo:    { name: "Bordo",          hex: "#7B1E2B" },
+  krem:     { name: "Krem",           hex: "#FFF3C4" },
+  bej:      { name: "Bej",            hex: "#D9C3A5" },
+  haki:     { name: "Haki / Zeytin yeşili", hex: "#6B7A2E" },
+  altin:    { name: "Altın sarısı",   hex: "#D4A017" },
+  patlican: { name: "Patlıcan moru",  hex: "#4A2B4F" },
+  somon:    { name: "Somon",          hex: "#FA8072" },
+};
+
+// ---- Tarifler: [renk1, renk2, sonuç] ----
+const RECIPES = [
+  ["kirmizi","sari","turuncu"],
+  ["sari","mavi","yesil"],
+  ["kirmizi","mavi","mor"],
+  ["kirmizi","turuncu","kirturuncu"],
+  ["sari","turuncu","sariturunc"],
+  ["sari","yesil","sariyesil"],
+  ["mavi","yesil","maviyesil"],
+  ["mavi","mor","mavimor"],
+  ["kirmizi","mor","kirmizimor"],
+  ["turuncu","mavi","kahve"],
+  ["beyaz","siyah","gri"],
+  ["beyaz","kirmizi","pembe"],
+  ["beyaz","mavi","acikmavi"],
+  ["beyaz","mor","lila"],
+  ["siyah","mavi","lacivert"],
+  ["siyah","yesil","koyuyesil"],
+  ["siyah","kirmizi","bordo"],
+  ["beyaz","sari","krem"],
+  ["beyaz","kahve","bej"],
+  ["yesil","kahve","haki"],
+  ["mor","kahve","patlican"],
+  ["sari","kahve","altin"],
+  ["turuncu","pembe","somon"],
+  // tamamlayıcılar → kahverengimsi
+  ["kirmizi","yesil","kahve"],
+  ["sari","mor","kahve"],
+];
+const key = (a, b) => [a, b].sort().join("|");
+const MAP = Object.fromEntries(RECIPES.map(([a, b, r]) => [key(a, b), r]));
+
+// ---- Yardımcılar ----
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgbToHex = c => "#" + c.map(v => Math.round(v).toString(16).padStart(2, "0")).join("");
+const isDark = hex => { const [r, g, b] = hexToRgb(hex); return (r * 299 + g * 587 + b * 114) / 1000 < 140; };
+const average = (h1, h2) => { const a = hexToRgb(h1), b = hexToRgb(h2); return rgbToHex(a.map((v, i) => (v + b[i]) / 2)); };
+
+function mix(idA, idB) {
+  const found = MAP[key(idA, idB)];
+  if (found) return { name: COLORS[found].name, hex: COLORS[found].hex, exact: true };
+  return { name: "Karışık ton", hex: average(COLORS[idA].hex, COLORS[idB].hex), exact: false };
+}
+
+function swatch(id, size) {
+  const c = COLORS[id];
+  const b = document.createElement("button");
+  b.className = "sw" + (isDark(c.hex) ? " dark" : "");
+  b.style.background = c.hex;
+  b.textContent = c.name;
+  b.title = c.name;
+  b.onclick = () => pick(id);
+  return b;
+}
+
+// ---- Renk çemberi ----
+const wheel = document.getElementById("wheel");
+Object.entries(COLORS).filter(([, c]) => c.wheel !== undefined).forEach(([id, c]) => {
+  const angle = (c.wheel / 12) * 2 * Math.PI - Math.PI / 2;
+  const el = swatch(id);
+  el.style.left = (160 + 125 * Math.cos(angle)) + "px";
+  el.style.top = (160 + 125 * Math.sin(angle)) + "px";
+  wheel.appendChild(el);
+});
+
+// ---- Diğer renkler ----
+const others = document.getElementById("others");
+Object.entries(COLORS).filter(([, c]) => c.wheel === undefined).forEach(([id]) => others.appendChild(swatch(id)));
+
+// ---- Karıştırıcı ----
+let sel = [];
+const slotA = document.getElementById("slotA"), slotB = document.getElementById("slotB"), slotR = document.getElementById("slotR");
+const rName = document.getElementById("result-name"), note = document.getElementById("note");
+
+function fill(slot, color, label) {
+  slot.style.background = color;
+  slot.style.color = isDark(color) ? "#fff" : "#000";
+  slot.textContent = label;
+  slot.classList.add("filled");
+}
+function clear(slot, text) {
+  slot.style.background = ""; slot.style.color = ""; slot.textContent = text; slot.classList.remove("filled");
+}
+function pick(id) {
+  if (sel.length === 2) sel = [];
+  sel.push(id);
+  render();
+}
+function render() {
+  clear(slotA, "1. renk"); clear(slotB, "2. renk"); clear(slotR, "?");
+  rName.textContent = ""; note.textContent = "";
+  if (sel[0]) fill(slotA, COLORS[sel[0]].hex, COLORS[sel[0]].name);
+  if (sel[1]) fill(slotB, COLORS[sel[1]].hex, COLORS[sel[1]].name);
+  if (sel.length === 2) {
+    const r = mix(sel[0], sel[1]);
+    fill(slotR, r.hex, r.name);
+    rName.textContent = COLORS[sel[0]].name + " + " + COLORS[sel[1]].name + " = " + r.name;
+    note.textContent = r.exact ? "" : "Bu karışım için hazır tarif yok; yaklaşık bir ton gösteriliyor.";
+  }
+}
+document.getElementById("reset").onclick = () => { sel = []; render(); };
+
+// ---- Tarif tablosu ----
+const tbody = document.querySelector("#recipes tbody");
+const dot = id => `<span class="dot" style="background:${COLORS[id].hex}"></span>${COLORS[id].name}`;
+RECIPES.forEach(([a, b, r]) => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${dot(a)} + ${dot(b)}</td><td>${dot(r)}</td>`;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
