@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#16233b">
+<title>Taban Boyası Kod Bulucu</title>
+<style>
+  :root {
+    --mürekkep: #16233b;
+    --kagit: #fbfaf6;
+    --zemin: #e4e8ec;
+    --sari: #f2c230;
+    --gri: #5d6878;
+    --cizgi: #cfd5dc;
+    --hata: #b3261e;
+    --yazi-basligi: "Rockwell", "Roboto Slab", "Courier New", Georgia, serif;
+    --yazi-govde: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--zemin); color: var(--mürekkep); font-family: var(--yazi-govde); line-height: 1.5; min-height: 100vh; }
+  .gizli { display: none !important; }
+
+  .serit { display: flex; height: 10px; }
+  .serit span { flex: 1; }
+
+  .sayfa { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .isaret { width: 34px; height: 34px; flex: none; }
+  header b { font-family: var(--yazi-basligi); font-size: 20px; letter-spacing: .2px; }
+
+  h1 { font-family: var(--yazi-basligi); font-weight: 700; font-size: clamp(30px, 8.5vw, 40px); line-height: 1.1; margin: 8px 0 12px; }
+  .giris { color: var(--gri); font-size: 17px; margin: 0 0 20px; max-width: 34ch; }
+
+  .kart { background: var(--kagit); border: 1px solid var(--cizgi); border-radius: 14px; padding: 18px; }
+
+  details { border-top: 1px solid var(--cizgi); padding-top: 12px; margin-top: 14px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+  .metin { font-size: 14px; color: var(--gri); margin-top: 10px; max-height: 190px; overflow: auto; padding-right: 6px; }
+  .onay { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; font-size: 16px; cursor: pointer; }
+  .onay input { width: 24px; height: 24px; flex: none; margin: 0; accent-color: var(--mürekkep); }
+
+  .buton { display: block; width: 100%; margin-top: 16px; padding: 16px 18px; border: 2px solid var(--mürekkep); border-radius: 12px; background: var(--mürekkep); color: #fff; font: 700 18px var(--yazi-govde); cursor: pointer; }
+  .buton:disabled { background: transparent; color: #8a93a1; border-color: var(--cizgi); cursor: not-allowed; }
+  .buton.ikincil { background: transparent; color: var(--mürekkep); }
+  .buton.sari { background: var(--sari); color: var(--mürekkep); border-color: var(--sari); }
+  .buton:focus-visible, summary:focus-visible, input:focus-visible { outline: 3px solid var(--sari); outline-offset: 3px; }
+  .satir { display: flex; gap: 10px; }
+  .satir .buton { margin-top: 12px; font-size: 16px; padding: 14px 10px; }
+
+  .hata { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--hata); color: var(--hata); background: #fdf1f0; font-size: 15px; }
+
+  .vizor { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 4 / 5; }
+  .vizor video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hedef { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; transform: translate(-50%, -50%); }
+  .hedef i { position: absolute; width: 14px; height: 14px; border: 3px solid var(--sari); }
+  .hedef i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; }
+  .hedef i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; }
+  .hedef i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; }
+  .hedef i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+  .ipucu { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 8px 12px; border-radius: 8px; background: rgba(22,35,59,.82); color: #fff; font-size: 14px; text-align: center; }
+  .donuk .ipucu::after { content: " Görüntü donduruldu."; font-weight: 700; color: var(--sari); }
+
+  .boya { margin-top: 14px; overflow: hidden; padding: 0; }
+  .boya .ornek { height: 92px; transition: background-color .2s; border-bottom: 1px solid var(--cizgi); }
+  .boya .ic { padding: 16px 18px 18px; }
+  .tur { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--mürekkep); margin-bottom: 8px; }
+  .tur.karisim { background: var(--sari); border-color: var(--sari); }
+  .kod { font-family: var(--yazi-basligi); font-weight: 700; font-size: 52px; line-height: 1.05; margin: 0; letter-spacing: 1px; }
+  .kod.uzun { font-size: 28px; letter-spacing: 0; }
+  .ad { font-size: 18px; margin: 6px 0 0; font-weight: 600; }
+  .guven { margin: 6px 0 0; font-size: 15px; color: var(--gri); }
+  .guven b { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--gri); }
+  .guven.iyi b { background: #2e7d32; }
+  .guven.orta b { background: #e0a100; }
+  .guven.zayif b { background: var(--hata); }
+
+  .digerleri { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--cizgi); }
+  .digerleri p { margin: 0 0 8px; font-size: 14px; color: var(--gri); }
+  .alt { display: flex; gap: 10px; }
+  .alt div { flex: 1; min-width: 0; border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 10px; font-size: 13px; background: #fff; }
+  .alt i { display: block; height: 18px; border-radius: 5px; margin-bottom: 6px; border: 1px solid rgba(0,0,0,.15); }
+  .alt strong { display: block; font-size: 14px; }
+
+  /* Ayarlar */
+  .ayar { margin-top: 14px; }
+  .ayar details { border-top: 0; margin-top: 0; padding-top: 0; }
+  .ayar summary { font-size: 16px; }
+  .ayar-satir { margin-top: 16px; }
+  .ayar-satir label { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 15px; }
+  .ayar-satir label span { font-weight: 400; color: var(--gri); }
+  .ayar-satir input[type=range] { width: 100%; margin: 8px 0 2px; accent-color: var(--mürekkep); height: 28px; }
+  .ayar-satir small { display: block; color: var(--gri); font-size: 13px; }
+  .ayar .satir .buton { margin-top: 10px; font-size: 15px; padding: 12px 8px; }
+
+  .not { font-size: 13px; color: var(--gri); margin: 14px 2px 0; }
+  .bildirim { text-align: center; font-size: 14px; color: #2e7d32; min-height: 20px; margin-top: 8px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="serit" id="serit" aria-hidden="true"></div>
+
+<main class="sayfa">
+  <header>
+    <svg class="isaret" viewBox="0 0 40 40" aria-hidden="true">
+      <rect width="40" height="40" rx="9" fill="#16233b"/>
+      <path d="M8 27c0-4 3-5 6-5h5c3 0 4-3 7-3 4 0 7 3 7 7v2c0 1-1 2-2 2H10c-1 0-2-1-2-3z" fill="#f2c230"/>
+      <rect x="8" y="30" width="24" height="3" rx="1.5" fill="#fbfaf6"/>
+    </svg>
+    <b>Taban Boyası</b>
+  </header>
+
+  <!-- 1. ADIM: izinler -->
+  <section id="izinAlani">
+    <h1>Tabanı kameraya göster, boya kodunu öğren.</h1>
+    <p class="giris">Başlamak için kamera kullanımına izin vermeniz gerekiyor.</p>
+
+    <div class="kart">
+      <b>Kişisel verilerin korunması (KVKK)</b>
+      <p style="margin:6px 0 0;font-size:15px;color:var(--gri)">
+        Kamera görüntüsü yalnızca bu cihazda, anlık olarak işlenir. Kaydedilmez ve hiçbir yere gönderilmez.
+      </p>
+      <details>
+        <summary>Aydınlatma metnini oku</summary>
+        <div class="metin">
+          Bu uygulama, taban boyası rengini tespit etmek amacıyla cihazınızın kamerasını kullanır.
+          Kamera görüntüsü yalnızca cihazınızda anlık olarak işlenir; kaydedilmez, saklanmaz ve
+          herhangi bir sunucuya aktarılmaz. Kamera erişimi için açık rızanız gereklidir ve rızanızı
+          dilediğiniz zaman tarayıcı ayarlarından geri çekebilirsiniz. 6698 sayılı Kişisel Verilerin
+          Korunması Kanunu kapsamındaki haklarınız saklıdır.<br><br>
+          <i>Veri sorumlusu: [İşletme Adı] — [Adres / İletişim]. Bu bölümü kendi bilgilerinizle güncelleyin.</i>
+        </div>
+      </details>
+      <label class="onay">
+        <input type="checkbox" id="kvkkOnay">
+        <span>Aydınlatma metnini okudum, kameramın kullanılmasına onay veriyorum.</span>
+      </label>
+      <button class="buton" id="kameraBtn" disabled>Kamerayı aç</button>
+      <div id="hata" class="hata gizli" role="alert"></div>
+    </div>
+  </section>
+
+  <!-- 2. ADIM: kamera ve sonuç -->
+  <section id="kameraAlani" class="gizli">
+    <div class="vizor" id="vizor">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="hedef" id="hedef" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="ipucu">Sarı kareyi taban boyasının üstüne getirin.</div>
+    </div>
+
+    <div class="kart boya" aria-live="polite">
+      <div class="ornek" id="renk"></div>
+      <div class="ic">
+        <span class="tur" id="tur">Hazır boya</span>
+        <p class="kod" id="kod">—</p>
+        <p class="ad" id="ad">Renk okunuyor…</p>
+        <p class="guven" id="guven"><b></b><span></span></p>
+        <div class="digerleri">
+          <p>Benzer diğer renkler</p>
+          <div class="alt" id="alt"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="satir">
+      <button class="buton sari" id="dondurBtn">Dondur</button>
+      <button class="buton ikincil" id="kopyaBtn">Kodu kopyala</button>
+    </div>
+    <div class="bildirim" id="bildirim"></div>
+
+    <!-- Kamera hassasiyeti -->
+    <div class="kart ayar">
+      <details>
+        <summary>Kamera hassasiyeti ayarları</summary>
+
+        <div class="ayar-satir">
+          <label for="alanAyar">Okuma alanı <span id="alanYazi"></span></label>
+          <input type="range" id="alanAyar" min="1" max="5" step="1" value="3">
+          <small>Küçük alan ince bir çizgiyi okur. Büyük alan lekeleri ve parlamayı dengeler.</small>
+        </div>
+
+        <div class="ayar-satir">
+          <label for="kararAyar">Kararlılık <span id="kararYazi"></span></label>
+          <input type="range" id="kararAyar" min="1" max="5" step="1" value="3">
+          <small>Kod çok titriyorsa artırın. Renk geç değişiyorsa azaltın.</small>
+        </div>
+
+        <div class="ayar-satir">
+          <label for="parlakAyar">Parlaklık düzeltme <span id="parlakYazi"></span></label>
+          <input type="range" id="parlakAyar" min="70" max="140" step="5" value="100">
+          <small>Ortam karanlıksa artırın, çok parlaksa azaltın.</small>
+        </div>
+
+        <div class="ayar-satir">
+          <label>Beyaz ayarı <span id="beyazYazi">Yapılmadı</span></label>
+          <small>Işık sarımsı veya mavimsi ise renkler kayar. Beyaz bir kâğıdı sarı karenin içine tutup düğmeye basın.</small>
+          <div class="satir">
+            <button class="buton ikincil" id="beyazBtn">Beyaz ayarı yap</button>
+            <button class="buton ikincil" id="beyazSifirBtn">Sıfırla</button>
+          </div>
+          <button class="buton ikincil gizli" id="flasBtn">Flaşı aç</button>
+        </div>
+      </details>
+    </div>
+
+    <button class="buton ikincil" id="durdurBtn">Kamerayı kapat</button>
+    <p class="not">Karışım oranları tahminidir. Büyük miktar hazırlamadan önce küçük bir deneme yapın. Gerçek karışım tariflerinizi dosyadaki ELLE_KARISIM listesine ekleyebilirsiniz.</p>
+  </section>
+</main>
+
+<canvas id="cv" class="gizli"></canvas>
+
+<script>
+// ============================================================
+// 1) TEMEL BOYALAR — kendi boyalarınıza göre düzenleyin
+// ============================================================
+const TEMEL = [
+  { kod: "TB-01", ad: "Siyah",        hex: "#111111" },
+  { kod: "TB-02", ad: "Antrasit",     hex: "#2f3237" },
+  { kod: "TB-03", ad: "Koyu Gri",     hex: "#55595f" },
+  { kod: "TB-04", ad: "Gri",          hex: "#8a8d91" },
+  { kod: "TB-05", ad: "Açık Gri",     hex: "#c3c5c8" },
+  { kod: "TB-06", ad: "Beyaz",        hex: "#f4f4f1" },
+  { kod: "TB-07", ad: "Krem",         hex: "#efe4c8" },
+  { kod: "TB-08", ad: "Naturel/Bej",  hex: "#d9c3a0" },
+  { kod: "TB-09", ad: "Sarı",         hex: "#e8c21c" },
+  { kod: "TB-10", ad: "Hardal",       hex: "#c4952a" },
+  { kod: "TB-11", ad: "Turuncu",      hex: "#d9701f" },
+  { kod: "TB-12", ad: "Taba",         hex: "#a0662c" },
+  { kod: "TB-13", ad: "Açık Kahve",   hex: "#8a5a36" },
+  { kod: "TB-14", ad: "Kahverengi",   hex: "#6b4423" },
+  { kod: "TB-15", ad: "Koyu Kahve",   hex: "#3b2417" },
+  { kod: "TB-16", ad: "Kırmızı",      hex: "#c1272d" },
+  { kod: "TB-17", ad: "Bordo",        hex: "#5e1420" },
+  { kod: "TB-18", ad: "Pembe",        hex: "#d98aa0" },
+  { kod: "TB-19", ad: "Mor",          hex: "#5b3a7a" },
+  { kod: "TB-20", ad: "Lacivert",     hex: "#1b2a4a" },
+  { kod: "TB-21", ad: "Mavi",         hex: "#2a5db0" },
+  { kod: "TB-22", ad: "Açık Mavi",    hex: "#7fb0dc" },
+  { kod: "TB-23", ad: "Turkuaz",      hex: "#1f9aa3" },
+  { kod: "TB-24", ad: "Yeşil",        hex: "#2e6b3a" },
+  { kod: "TB-25", ad: "Koyu Yeşil",   hex: "#1c3d2a" },
+  { kod: "TB-26", ad: "Haki",         hex: "#6f7143" },
+];
+
+// ============================================================
+// 2) ELLE KARIŞIM TARİFLERİ — kendi ölçtüğünüz gerçek tarifler
+//    (hex: o karışımın gerçek rengi). Bunlar otomatik karışımlardan önceliklidir.
+// ============================================================
+const ELLE_KARISIM = [
+  // { kod: "KR-01", ad: "Sıcak Taba", hex: "#b0713a", tarif: "2 kısım TB-12 + 1 kısım TB-09" },
+];
+
+// Otomatik karışım oranları (a : b)
+const ORANLAR = [[1,1],[2,1],[1,2],[3,1],[1,3]];
+
+// ============================================================
+// Renk matematiği
+// ============================================================
+const hexRgb = h => [1,3,5].map(i => parseInt(h.substr(i,2),16));
+const dogrusal = v => { v/=255; return v>0.04045 ? Math.pow((v+0.055)/1.055,2.4) : v/12.92; };
+const sRGBye = l => Math.round(255 * (l<=0.0031308 ? l*12.92 : 1.055*Math.pow(l,1/2.4)-0.055));
+function rgbLab([r,g,b]) {
+  [r,g,b] = [r,g,b].map(dogrusal);
+  const x = (r*0.4124+g*0.3576+b*0.1805)/0.95047;
+  const y = (r*0.2126+g*0.7152+b*0.0722);
+  const z = (r*0.0193+g*0.1192+b*0.9505)/1.08883;
+  const f = t => t>0.008856 ? Math.cbrt(t) : 7.787*t+16/116;
+  return [116*f(y)-16, 500*(f(x)-f(y)), 200*(f(y)-f(z))];
+}
+const fark = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1], a[2]-b[2]);
+
+// Boya gibi (çıkarmalı) karıştırma: doğrusal renkte ağırlıklı geometrik ortalama
+function karistir(rgbA, rgbB, a, b) {
+  const t = a + b, ea = 0.01;
+  return [0,1,2].map(i => {
+    const x = Math.max(dogrusal(rgbA[i]), ea), y = Math.max(dogrusal(rgbB[i]), ea);
+    return sRGBye(Math.exp((a*Math.log(x) + b*Math.log(y)) / t));
+  });
+}
+
+// ============================================================
+// Tüm renk listesini oluştur: temel + elle karışım + otomatik karışım
+// ============================================================
+const TUM = [];
+function ekle(e) { e.rgb = hexRgb(e.hex); e.lab = rgbLab(e.rgb); TUM.push(e); }
+
+TEMEL.forEach(p => ekle({ tur: "hazir", kod: p.kod, ad: p.ad, hex: p.hex, tarif: "" }));
+ELLE_KARISIM.forEach(p => ekle({ tur: "karisim", kod: p.kod, ad: p.ad, hex: p.hex, tarif: p.tarif }));
+
+(function otomatikKarisim() {
+  for (let i = 0; i < TEMEL.length; i++) {
+    for (let j = i+1; j < TEMEL.length; j++) {
+      for (const [a, b] of ORANLAR) {
+        const rgb = karistir(hexRgb(TEMEL[i].hex), hexRgb(TEMEL[j].hex), a, b);
+        const lab = rgbLab(rgb);
+        // Zaten listede çok benzeri varsa ekleme (liste şişmesin)
+        if (TUM.some(e => fark(e.lab, lab) < 5)) continue;
+        const hex = "#" + rgb.map(v => v.toString(16).padStart(2,"0")).join("");
+        ekle({
+          tur: "karisim",
+          kod: `${TEMEL[i].kod} ×${a} + ${TEMEL[j].kod} ×${b}`,
+          ad: `${TEMEL[i].ad} + ${TEMEL[j].ad}`,
+          hex,
+          tarif: `${a} kısım ${TEMEL[i].ad} (${TEMEL[i].kod}) + ${b} kısım ${TEMEL[j].ad} (${TEMEL[j].kod})`
+        });
+      }
+    }
+  }
+})();
+
+const $ = id => document.getElementById(id);
+$("serit").innerHTML = TEMEL.map(p => `<span style="background:${p.hex}"></span>`).join("");
+
+function siralaYakin(rgb) {
+  const lab = rgbLab(rgb);
+  return TUM.map(e => ({ e, d: fark(e.lab, lab) })).sort((x, y) => x.d - y.d);
+}
+
+// ============================================================
+// Ayarlar
+// ============================================================
+const ALANLAR = [0.03, 0.05, 0.08, 0.12, 0.18];
+const ALAN_AD = ["Çok küçük", "Küçük", "Orta", "Büyük", "Çok büyük"];
+const KARARLILIK = [0.8, 0.55, 0.4, 0.25, 0.12];       // yeni ölçümün ağırlığı
+const KARAR_AD = ["Çok hızlı", "Hızlı", "Dengeli", "Kararlı", "Çok kararlı"];
+
+const ayar = { alan: 3, karar: 3, parlak: 100, beyaz: [1,1,1], beyazYapildi: false };
+try { Object.assign(ayar, JSON.parse(localStorage.getItem("tabanAyar") || "{}")); } catch (e) {}
+function kaydet() { try { localStorage.setItem("tabanAyar", JSON.stringify(ayar)); } catch (e) {} }
+
+function ayarYaz() {
+  $("alanAyar").value = ayar.alan;   $("alanYazi").textContent = ALAN_AD[ayar.alan-1];
+  $("kararAyar").value = ayar.karar; $("kararYazi").textContent = KARAR_AD[ayar.karar-1];
+  $("parlakAyar").value = ayar.parlak; $("parlakYazi").textContent = "%" + ayar.parlak;
+  $("beyazYazi").textContent = ayar.beyazYapildi ? "Yapıldı" : "Yapılmadı";
+  hedefGuncelle();
+}
+$("alanAyar").addEventListener("input", e => { ayar.alan = +e.target.value; son = null; ayarYaz(); kaydet(); });
+$("kararAyar").addEventListener("input", e => { ayar.karar = +e.target.value; ayarYaz(); kaydet(); });
+$("parlakAyar").addEventListener("input", e => { ayar.parlak = +e.target.value; ayarYaz(); kaydet(); if (donuk) goster(duzelt(son)); });
+
+// ============================================================
+// Kamera
+// ============================================================
+let stream = null, zamanlayici = null, donuk = false, sonKod = "", son = null, flasAcik = false;
+
+$("kvkkOnay").addEventListener("change", e => { $("kameraBtn").disabled = !e.target.checked; });
+
+$("kameraBtn").addEventListener("click", async () => {
+  $("hata").classList.add("gizli");
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } }, audio: false
+    });
+    $("video").srcObject = stream;
+    $("izinAlani").classList.add("gizli");
+    $("kameraAlani").classList.remove("gizli");
+    donuk = false;
+    ayarYaz();
+    flasKontrol();
+    zamanlayici = setInterval(renkOku, 250);
+  } catch (e) {
+    let m = "Kamera açılamadı. Tarayıcının adres çubuğundan kamera iznini açıp tekrar deneyin.";
+    if (!window.isSecureContext) m = "Kamera yalnızca güvenli bağlantıda çalışır. Sayfayı https:// ile açın.";
+    $("hata").textContent = m;
+    $("hata").classList.remove("gizli");
+  }
+});
+
+$("video").addEventListener("loadedmetadata", hedefGuncelle);
+window.addEventListener("resize", hedefGuncelle);
+
+// Okuma karesini ekranda gerçek boyutuyla göster
+function hedefGuncelle() {
+  const v = $("video"), kutu = $("vizor");
+  if (!v.videoWidth) return;
+  const olcek = Math.max(kutu.clientWidth / v.videoWidth, kutu.clientHeight / v.videoHeight);
+  const kare = Math.min(v.videoWidth, v.videoHeight) * ALANLAR[ayar.alan-1];
+  const px = Math.max(28, kare * olcek);
+  $("hedef").style.width = px + "px";
+  $("hedef").style.height = px + "px";
+}
+
+function renkOku() {
+  if (donuk) return;
+  const v = $("video");
+  if (!v.videoWidth) return;
+  const cv = $("cv"), ctx = cv.getContext("2d", { willReadFrequently: true });
+  const boy = 24;
+  cv.width = boy; cv.height = boy;
+  const kare = Math.min(v.videoWidth, v.videoHeight) * ALANLAR[ayar.alan-1];
+  ctx.drawImage(v, v.videoWidth/2 - kare/2, v.videoHeight/2 - kare/2, kare, kare, 0, 0, boy, boy);
+  const d = ctx.getImageData(0, 0, boy, boy).data;
+
+  // Ortalama yerine kırpılmış ortalama: en parlak ve en koyu %10'u at (parlama/gölge)
+  const parlaklik = [], idx = [];
+  for (let i = 0; i < d.length; i += 4) { parlaklik.push(d[i]*0.3 + d[i+1]*0.59 + d[i+2]*0.11); idx.push(i); }
+  const sirali = idx.map((p, k) => k).sort((a, b) => parlaklik[a] - parlaklik[b]);
+  const kes = Math.floor(sirali.length * 0.1);
+  let r=0, g=0, b=0, n=0;
+  for (let k = kes; k < sirali.length - kes; k++) { const i = idx[sirali[k]]; r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
+  const anlik = [r/n, g/n, b/n];
+
+  const a = KARARLILIK[ayar.karar-1];
+  son = son ? son.map((s, i) => s*(1-a) + anlik[i]*a) : anlik;
+  goster(duzelt(son));
+}
+
+// Beyaz ayarı ve parlaklık düzeltmesini uygula
+function duzelt(ham) {
+  return ham.map((v, i) => Math.max(0, Math.min(255, Math.round(v * ayar.beyaz[i] * ayar.parlak / 100))));
+}
+
+function goster(rgb) {
+  const sira = siralaYakin(rgb);
+  const en = sira[0].e;
+  $("renk").style.backgroundColor = `rgb(${rgb})`;
+
+  const karisim = en.tur === "karisim";
+  $("tur").textContent = karisim ? "Karışım" : "Hazır boya";
+  $("tur").className = "tur" + (karisim ? " karisim" : "");
+  $("kod").textContent = en.kod;
+  $("kod").className = "kod" + (en.kod.length > 8 ? " uzun" : "");
+  $("ad").textContent = karisim ? (en.tarif || en.ad) : en.ad;
+  sonKod = en.kod + (karisim && en.tarif ? " — " + en.tarif : "");
+
+  const g = $("guven");
+  g.className = "guven";
+  const d = sira[0].d;
+  let yazi;
+  if (d < 6)       { g.classList.add("iyi");   yazi = "Güçlü eşleşme"; }
+  else if (d < 12) { g.classList.add("orta");  yazi = "Yakın eşleşme"; }
+  else             { g.classList.add("zayif"); yazi = "Tam karşılığı yok, en yakını gösteriliyor"; }
+  g.querySelector("span").textContent = yazi;
+
+  $("alt").innerHTML = sira.slice(1, 3).map(x =>
+    `<div><i style="background:${x.e.hex}"></i><strong>${x.e.tur === "karisim" ? "Karışım" : x.e.kod}</strong>${x.e.tur === "karisim" ? (x.e.tarif || x.e.ad) : x.e.ad}</div>`).join("");
+}
+
+// ============================================================
+// Düğmeler
+// ============================================================
+$("dondurBtn").addEventListener("click", () => {
+  donuk = !donuk;
+  $("vizor").classList.toggle("donuk", donuk);
+  $("dondurBtn").textContent = donuk ? "Devam et" : "Dondur";
+  if (donuk) $("video").pause(); else $("video").play();
+});
+
+$("kopyaBtn").addEventListener("click", async () => {
+  if (!sonKod) return;
+  try { await navigator.clipboard.writeText(sonKod); $("bildirim").textContent = "Kopyalandı: " + sonKod; }
+  catch (e) { $("bildirim").textContent = "Kopyalanamadı. Elle yazın: " + sonKod; }
+  setTimeout(() => { $("bildirim").textContent = ""; }, 3000);
+});
+
+$("beyazBtn").addEventListener("click", () => {
+  if (!son) return;
+  const hedefBeyaz = 235;
+  ayar.beyaz = son.map(v => Math.max(0.5, Math.min(2, hedefBeyaz / Math.max(v, 1))));
+  ayar.beyazYapildi = true;
+  ayarYaz(); kaydet();
+  $("bildirim").textContent = "Beyaz ayarı yapıldı";
+  setTimeout(() => { $("bildirim").textContent = ""; }, 2500);
+});
+$("beyazSifirBtn").addEventListener("click", () => {
+  ayar.beyaz = [1,1,1]; ayar.beyazYapildi = false; ayarYaz(); kaydet();
+});
+
+// Flaş (cihaz destekliyorsa)
+function flasKontrol() {
+  try {
+    const iz = stream.getVideoTracks()[0];
+    const yet = iz.getCapabilities ? iz.getCapabilities() : {};
+    if (yet.torch) $("flasBtn").classList.remove("gizli");
+  } catch (e) {}
+}
+$("flasBtn").addEventListener("click", async () => {
+  try {
+    flasAcik = !flasAcik;
+    await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: flasAcik }] });
+    $("flasBtn").textContent = flasAcik ? "Flaşı kapat" : "Flaşı aç";
+  } catch (e) { flasAcik = false; }
+});
+
+$("durdurBtn").addEventListener("click", () => {
+  clearInterval(zamanlayici);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; son = null; donuk = false; flasAcik = false;
+  $("vizor").classList.remove("donuk");
+  $("dondurBtn").textContent = "Dondur";
+  $("flasBtn").classList.add("gizli");
+  $("flasBtn").textContent = "Flaşı aç";
+  $("kameraAlani").classList.add("gizli");
+  $("izinAlani").classList.remove("gizli");
+});
+
+ayarYaz();
+</script>
+</body>
+</html>
